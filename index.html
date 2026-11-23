@@ -10,9 +10,6 @@
   <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
-  <!-- 3D Background Canvas -->
-  <canvas id="bg-canvas" aria-hidden="true"></canvas>
-
   <!-- Header -->
   <header class="header" role="banner">
     <div class="container header-inner">
@@ -59,192 +56,114 @@
         <div class="hero-content">
           <div class="hero-badge">
             <span class="badge-dot" aria-hidden="true"></span>
-            <span>Verified jobs from 195+ countries</span>
+            <span>Verified jobs from target countries</span>
           </div>
           <h1 id="hero-title" class="hero-title">
-            Find Your Next Opportunity
-            <span class="highlight">Anywhere in the World</span>
+            Find Genuine Opportunities
+            <span class="highlight">In Your Target Countries</span>
           </h1>
           <p class="hero-subtitle">
-            Search genuine full-time, part-time, freelance, and government roles across every industry.
-            Filter by visa type, salary, tech stack, and eligibility — all in one place.
+            Search verified full-time, part-time, freelance, contract, and government roles across EU states, Canada, UAE, Australia, and New Zealand.
+            All listings link directly to official company career pages.
           </p>
 
-          <!-- Quick Search Bar -->
-          <form class="hero-search" id="hero-search" role="search" aria-label="Quick job search">
-            <div class="search-input-group">
-              <label for="hero-keyword" class="visually-hidden">Job title or keyword</label>
-              <input
-                type="search"
-                id="hero-keyword"
-                name="keyword"
-                placeholder="Job title, keyword, or company"
-                class="search-input"
-                autocomplete="off"
-                aria-describedby="keyword-hint"
-              >
-              <span id="keyword-hint" class="visually-hidden">Enter job title, technology, or company name</span>
+          <!-- Step 1: Job Type Selection -->
+          <div class="search-step" id="step-job-type" aria-labelledby="step1-title">
+            <h2 id="step1-title" class="step-title">Step 1: What type of work are you looking for?</h2>
+            <div class="job-type-grid" role="group" aria-label="Job type selection">
+              <button type="button" class="job-type-card" data-type="fulltime" role="radio" aria-checked="false">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M6 12h12"/></svg>
+                <span class="job-type-label">Full-time</span>
+                <span class="job-type-desc">Permanent positions</span>
+              </button>
+              <button type="button" class="job-type-card" data-type="parttime" role="radio" aria-checked="false">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                <span class="job-type-label">Part-time</span>
+                <span class="job-type-desc">Flexible hours</span>
+              </button>
+              <button type="button" class="job-type-card" data-type="freelance" role="radio" aria-checked="false">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                <span class="job-type-label">Freelance</span>
+                <span class="job-type-desc">Project-based work</span>
+              </button>
+              <button type="button" class="job-type-card" data-type="contract" role="radio" aria-checked="false">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                <span class="job-type-label">Contract</span>
+                <span class="job-type-desc">Fixed-term roles</span>
+              </button>
+              <button type="button" class="job-type-card" data-type="internship" role="radio" aria-checked="false">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
+                <span class="job-type-label">Internship</span>
+                <span class="job-type-desc">Entry-level experience</span>
+              </button>
+              <button type="button" class="job-type-card" data-type="government" role="radio" aria-checked="false">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                <span class="job-type-label">Government</span>
+                <span class="job-type-desc">Public sector roles</span>
+              </button>
             </div>
-            <div class="search-input-group">
-              <label for="hero-location" class="visually-hidden">Location</label>
-              <input
-                type="search"
-                id="hero-location"
-                name="location"
-                placeholder="Country, city, or 'Remote'"
-                class="search-input"
-                autocomplete="off"
-                aria-describedby="location-hint"
-              >
-              <span id="location-hint" class="visually-hidden">Enter country, city, or Remote</span>
-            </div>
-            <button type="submit" class="btn btn-primary btn-lg">
-              <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                <circle cx="11" cy="11" r="8"/>
-                <path d="M21 21l-4.35-4.35"/>
-              </svg>
-              <span>Search Jobs</span>
-            </button>
-          </form>
+          </div>
 
-          <div class="hero-stats" aria-label="Platform statistics">
-            <div class="stat">
-              <span class="stat-value" data-count="1250000">1.25M+</span>
-              <span class="stat-label">Active Listings</span>
+          <!-- Step 2: Country Selection (shown after job type selected) -->
+          <div class="search-step hidden" id="step-country" aria-labelledby="step2-title">
+            <h2 id="step2-title" class="step-title">Step 2: Where do you want to work?</h2>
+            <p class="step-subtitle">Select your target countries (EU states, Canada, UAE, Australia, New Zealand)</p>
+            <div class="country-grid" id="country-grid" role="group" aria-label="Country selection">
+              <!-- Populated by JS -->
             </div>
-            <div class="stat">
-              <span class="stat-value" data-count="195">195</span>
-              <span class="stat-label">Countries</span>
-            </div>
-            <div class="stat">
-              <span class="stat-value" data-count="45000">45K+</span>
-              <span class="stat-label">Companies</span>
-            </div>
-            <div class="stat">
-              <span class="stat-value" data-count="98">98%</span>
-              <span class="stat-label">Verified</span>
+            <div class="step-actions">
+              <button type="button" class="btn btn-ghost" id="back-to-job-type">Change Job Type</button>
+              <button type="button" class="btn btn-primary btn-lg" id="fetch-jobs-btn" disabled>Fetch Jobs</button>
             </div>
           </div>
-        </div>
 
-        <!-- Floating Cards -->
-        <div class="hero-floating" aria-hidden="true">
-          <div class="float-card float-card-1">
-            <div class="float-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                <polyline points="14 2 14 8 20 8"/>
-                <line x1="16" y1="13" x2="8" y2="13"/>
-                <line x1="16" y1="17" x2="8" y2="17"/>
-                <polyline points="10 9 9 9 8 9"/>
-              </svg>
-            </div>
-            <div class="float-content">
-              <strong>Resume Match</strong>
-              <span>Upload once, get matched instantly</span>
-            </div>
-          </div>
-          <div class="float-card float-card-2">
-            <div class="float-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                <circle cx="12" cy="12" r="10"/>
-                <path d="M12 6v6l4 2"/>
-              </svg>
-            </div>
-            <div class="float-content">
-              <strong>Visa Guidance</strong>
-              <span>Know eligibility before you apply</span>
-            </div>
-          </div>
-          <div class="float-card float-card-3">
-            <div class="float-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-                <circle cx="9" cy="7" r="4"/>
-                <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-                <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-              </svg>
-            </div>
-            <div class="float-content">
-              <strong>Direct Apply</strong>
-              <span>Links to official career pages</span>
-            </div>
+          <!-- Loading State -->
+          <div class="search-step hidden" id="step-loading" aria-live="polite">
+            <div class="loading-spinner" aria-hidden="true"></div>
+            <h2 class="step-title">Fetching verified jobs...</h2>
+            <p class="step-subtitle">Searching official career pages and government portals</p>
           </div>
         </div>
       </div>
     </section>
 
-    <!-- Advanced Search Section -->
-    <section class="search-section" id="search" aria-labelledby="search-title">
+    <!-- Advanced Search Section (shown after fetch) -->
+    <section class="search-section hidden" id="search" aria-labelledby="search-title">
       <div class="container">
         <header class="section-header">
-          <h2 id="search-title" class="section-title">Advanced Job Search</h2>
-          <p class="section-subtitle">Filter by every dimension that matters to you</p>
+          <div class="header-flex">
+            <div>
+              <h2 id="search-title" class="section-title">Results for <span id="result-job-type"></span> in <span id="result-countries"></span></h2>
+              <p class="section-subtitle" id="results-subtitle"><span id="results-count">0</span> verified jobs found</p>
+            </div>
+            <div class="header-actions-search">
+              <button type="button" class="btn btn-ghost" id="new-search-btn">New Search</button>
+            </div>
+          </div>
         </header>
 
         <div class="search-layout">
           <!-- Filters Sidebar -->
           <aside class="filters-sidebar" role="complementary" aria-label="Search filters">
             <form id="filter-form" class="filter-form">
-              <!-- Job Type -->
+              <!-- Keyword Search -->
               <fieldset class="filter-group">
-                <legend class="filter-label">Job Type</legend>
-                <div class="filter-options">
-                  <label class="filter-option">
-                    <input type="checkbox" name="jobType" value="fulltime" checked>
-                    <span class="filter-option-ui">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M6 12h12"/></svg>
-                      <span>Full-time</span>
-                    </span>
-                  </label>
-                  <label class="filter-option">
-                    <input type="checkbox" name="jobType" value="parttime">
-                    <span class="filter-option-ui">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-                      <span>Part-time</span>
-                    </span>
-                  </label>
-                  <label class="filter-option">
-                    <input type="checkbox" name="jobType" value="freelance">
-                    <span class="filter-option-ui">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
-                      <span>Freelance</span>
-                    </span>
-                  </label>
-                  <label class="filter-option">
-                    <input type="checkbox" name="jobType" value="contract">
-                    <span class="filter-option-ui">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                      <span>Contract</span>
-                    </span>
-                  </label>
-                  <label class="filter-option">
-                    <input type="checkbox" name="jobType" value="internship">
-                    <span class="filter-option-ui">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
-                      <span>Internship</span>
-                    </span>
-                  </label>
-                  <label class="filter-option">
-                    <input type="checkbox" name="jobType" value="government">
-                    <span class="filter-option-ui">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-                      <span>Government</span>
-                    </span>
-                  </label>
+                <legend class="filter-label">Keywords</legend>
+                <div class="filter-search">
+                  <input type="search" id="keyword-filter" placeholder="Job title, company, skill..." aria-label="Search keywords">
                 </div>
               </fieldset>
 
-              <!-- Countries -->
+              <!-- Country Filter (pre-selected from step 2) -->
               <fieldset class="filter-group">
                 <legend class="filter-label">
                   Countries
-                  <button type="button" class="filter-expand" aria-expanded="false" aria-controls="country-list">Show more</button>
+                  <button type="button" class="filter-expand" aria-expanded="false" aria-controls="country-filter-list">Show more</button>
                 </legend>
                 <div class="filter-search">
                   <input type="search" placeholder="Filter countries..." aria-label="Filter countries">
                 </div>
-                <div id="country-list" class="filter-options filter-options-scroll">
+                <div id="country-filter-list" class="filter-options filter-options-scroll">
                   <!-- Populated by JS -->
                 </div>
               </fieldset>
@@ -262,28 +181,20 @@
                     <span class="filter-option-ui"><span>Work visa sponsored</span></span>
                   </label>
                   <label class="filter-option">
-                    <input type="checkbox" name="visaType" value="digital-nomad">
-                    <span class="filter-option-ui"><span>Digital nomad visa</span></span>
+                    <input type="checkbox" name="visaType" value="eu-blue-card">
+                    <span class="filter-option-ui"><span>EU Blue Card</span></span>
                   </label>
                   <label class="filter-option">
                     <input type="checkbox" name="visaType" value="working-holiday">
                     <span class="filter-option-ui"><span>Working holiday</span></span>
                   </label>
                   <label class="filter-option">
-                    <input type="checkbox" name="visaType" value="eu-blue-card">
-                    <span class="filter-option-ui"><span>EU Blue Card</span></span>
-                  </label>
-                  <label class="filter-option">
-                    <input type="checkbox" name="visaType" value="h1b">
-                    <span class="filter-option-ui"><span>H-1B (US)</span></span>
+                    <input type="checkbox" name="visaType" value="digital-nomad">
+                    <span class="filter-option-ui"><span>Digital nomad visa</span></span>
                   </label>
                   <label class="filter-option">
                     <input type="checkbox" name="visaType" value="skilled-worker-uk">
                     <span class="filter-option-ui"><span>Skilled Worker (UK)</span></span>
-                  </label>
-                  <label class="filter-option">
-                    <input type="checkbox" name="visaType" value="tn-visa">
-                    <span class="filter-option-ui"><span>TN Visa (US/CA/MX)</span></span>
                   </label>
                   <label class="filter-option">
                     <input type="checkbox" name="visaType" value="permanent-residency-path">
@@ -294,17 +205,17 @@
 
               <!-- Salary Range -->
               <fieldset class="filter-group">
-                <legend class="filter-label">Annual Salary (USD)</legend>
+                <legend class="filter-label">Annual Salary (Local Currency)</legend>
                 <div class="salary-range">
                   <div class="range-inputs">
                     <div class="range-input">
                       <label for="salary-min" class="visually-hidden">Minimum salary</label>
-                      <input type="number" id="salary-min" name="salaryMin" placeholder="Min" min="0" step="10000" aria-label="Minimum salary in USD">
+                      <input type="number" id="salary-min" name="salaryMin" placeholder="Min" min="0" step="10000" aria-label="Minimum salary">
                     </div>
                     <span class="range-separator">–</span>
                     <div class="range-input">
                       <label for="salary-max" class="visually-hidden">Maximum salary</label>
-                      <input type="number" id="salary-max" name="salaryMax" placeholder="Max" min="0" step="10000" aria-label="Maximum salary in USD">
+                      <input type="number" id="salary-max" name="salaryMax" placeholder="Max" min="0" step="10000" aria-label="Maximum salary">
                     </div>
                   </div>
                   <div class="salary-presets" role="group" aria-label="Salary presets">
@@ -320,12 +231,12 @@
               <fieldset class="filter-group">
                 <legend class="filter-label">
                   Technologies & Skills
-                  <button type="button" class="filter-expand" aria-expanded="false" aria-controls="tech-list">Show more</button>
+                  <button type="button" class="filter-expand" aria-expanded="false" aria-controls="tech-filter-list">Show more</button>
                 </legend>
                 <div class="filter-search">
                   <input type="search" placeholder="Search technologies..." aria-label="Search technologies">
                 </div>
-                <div id="tech-list" class="filter-options filter-options-scroll">
+                <div id="tech-filter-list" class="filter-options filter-options-scroll">
                   <!-- Populated by JS -->
                 </div>
               </fieldset>
@@ -385,7 +296,7 @@
                   <label class="filter-option">
                     <input type="checkbox" name="remote" value="relocation">
                     <span class="filter-option-ui">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41-1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
                       <span>Relocation Offered</span>
                     </span>
                   </label>
@@ -507,7 +418,7 @@
             </div>
           </div>
 
-          <!-- Match Results -->
+          <!-- Match Results Panel -->
           <div class="match-results-panel" id="match-results-panel" hidden>
             <div class="match-header">
               <div class="match-summary">
@@ -556,7 +467,7 @@
       <div class="container">
         <header class="section-header">
           <h2 id="how-title" class="section-title">How It Works</h2>
-          <p class="section-subtitle">Three steps to your global career</p>
+          <p class="section-subtitle">Four steps to your global career</p>
         </header>
 
         <div class="steps">
@@ -564,36 +475,41 @@
             <div class="step-number">01</div>
             <div class="step-icon">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                <circle cx="11" cy="11" r="8"/>
-                <path d="M21 21l-4.35-4.35"/>
+                <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
               </svg>
             </div>
-            <h3>Search & Filter</h3>
-            <p>Use advanced filters for country, visa type, salary, tech stack, and work arrangement. Every listing is verified and links directly to the employer's career page.</p>
+            <h3>Choose Job Type</h3>
+            <p>Select full-time, part-time, freelance, contract, internship, or government roles.</p>
           </article>
           <article class="step">
             <div class="step-number">02</div>
             <div class="step-icon">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                <polyline points="14 2 14 8 20 8"/>
-                <line x1="16" y1="13" x2="8" y2="13"/>
-                <line x1="16" y1="17" x2="8" y2="17"/>
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
               </svg>
             </div>
-            <h3>Upload Resume</h3>
-            <p>Drop your resume once. Our parser extracts skills, experience, and preferences — then matches you against millions of global roles with eligibility scoring.</p>
+            <h3>Select Countries</h3>
+            <p>Pick from EU states, Canada, UAE, Australia, New Zealand — only verified markets.</p>
           </article>
           <article class="step">
             <div class="step-number">03</div>
             <div class="step-icon">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-                <polyline points="22 4 12 14.01 9 11.01"/>
+                <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
               </svg>
             </div>
-            <h3>Apply with Confidence</h3>
-            <p>See exactly what you qualify for, what's missing, and visa requirements. Click through to official applications — no middlemen, no fake listings.</p>
+            <h3>Fetch Verified Jobs</h3>
+            <p>We search official company career pages and government portals for current listings.</p>
+          </article>
+          <article class="step">
+            <div class="step-number">04</div>
+            <div class="step-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
+              </svg>
+            </div>
+            <h3>Apply Directly</h3>
+            <p>Click through to official applications — no middlemen, no fake listings, verified redirects.</p>
           </article>
         </div>
       </div>
@@ -606,13 +522,13 @@
         <div class="trust-grid">
           <div class="trust-item">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-            <strong>Verified Employers</strong>
-            <span>Every company manually verified</span>
+            <strong>Verified Sources</strong>
+            <span>Official career pages & government portals only</span>
           </div>
           <div class="trust-item">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/></svg>
             <strong>Direct Applications</strong>
-            <span>No recruiters, no middlemen</span>
+            <span>No recruiters, no middlemen, no fake listings</span>
           </div>
           <div class="trust-item">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
@@ -621,8 +537,8 @@
           </div>
           <div class="trust-item">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-            <strong>Real-time Updates</strong>
-            <span>New jobs indexed daily</span>
+            <strong>Targeted Countries</strong>
+            <span>EU, Canada, UAE, Australia, New Zealand</span>
           </div>
         </div>
       </div>
@@ -632,8 +548,8 @@
     <section class="cta" aria-labelledby="cta-title">
       <div class="container">
         <div class="cta-content">
-          <h2 id="cta-title">Ready to Work Anywhere?</h2>
-          <p>Join 500,000+ professionals finding genuine global opportunities</p>
+          <h2 id="cta-title">Ready to Work Abroad?</h2>
+          <p>Find verified opportunities in your target countries</p>
           <div class="cta-actions">
             <button class="btn btn-primary btn-lg" id="cta-search">Start Searching Free</button>
             <button class="btn btn-outline btn-lg" id="cta-upload">Upload Resume</button>
@@ -656,7 +572,7 @@
             </svg>
             <span class="logo-text">Global Job Search</span>
           </a>
-          <p>Connecting talent with opportunity across borders. Verified jobs. Direct applications. No noise.</p>
+          <p>Connecting talent with verified opportunities across borders. Official sources only. No noise.</p>
           <div class="social" role="list" aria-label="Social links">
             <a href="#" class="social-link" aria-label="LinkedIn" role="listitem"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg></a>
             <a href="#" class="social-link" aria-label="Twitter" role="listitem"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M23 3a10.9 10.9 0 0 1-3.14 1.53 4.48 4.48 0 0 0-7.86 3v1A10.66 10.66 0 0 1 3 4s-4 9 5 13a11.64 11.64 0 0 1-7 2c9 5 20 0 20-11.5a4.5 4.5 0 0 0-.08-.83A7.72 7.72 0 0 0 23 3z"/></svg></a>
@@ -711,7 +627,7 @@
 
       <div class="footer-bottom">
         <p>&copy; 2025 Global Job Search. All rights reserved.</p>
-        <p class="footer-disclaimer">Job listings aggregated from verified company career pages. We do not employ recruiters or agencies.</p>
+        <p class="footer-disclaimer">Job listings aggregated from verified company career pages and government portals. We do not employ recruiters or agencies.</p>
       </div>
     </div>
   </footer>

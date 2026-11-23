@@ -1,11 +1,11 @@
 /**
  * Global Job Search — Main Application
- * Handles UI, filtering, resume matching, 3D background, and interactions
+ * Flow: Job Type → Country → Fetch → Advanced Filters & Results
  */
 
 import {
-  COUNTRIES, TECHNOLOGIES, JOB_TYPES, VISA_TYPES, EXPERIENCE_LEVELS, REMOTE_POLICIES,
-  JOBS, formatSalary, formatDate, getCountryName, getCountryFlag,
+  TARGET_COUNTRIES, JOB_TYPES, VISA_TYPES, TECHNOLOGIES, EXPERIENCE_LEVELS, REMOTE_POLICIES,
+  SAMPLE_JOBS, formatSalary, formatDate, getCountryName, getCountryFlag, getCountryCurrency,
   filterJobs, sortJobs, paginateJobs, parseResume, matchJobsToResume
 } from './data.js';
 
@@ -14,10 +14,17 @@ import {
 // ============================================================================
 
 const state = {
-  // Search
+  // Search flow
+  currentStep: 'job-type', // 'job-type', 'country', 'loading', 'results'
+  selectedJobType: null,
+  selectedCountries: [],
+  fetchedJobs: [],
+  filteredJobs: [],
+
+  // Filters (for results page)
   filters: {
     keyword: '',
-    jobType: ['fulltime'],
+    jobType: [],
     country: [],
     visaType: [],
     salaryMin: null,
@@ -30,7 +37,6 @@ const state = {
   viewMode: 'list',
   currentPage: 1,
   pageSize: 12,
-  filteredJobs: [],
   totalJobs: 0,
 
   // Resume Match
@@ -71,17 +77,6 @@ function debounce(fn, ms = 300) {
   };
 }
 
-function throttle(fn, ms = 100) {
-  let lastTime = 0;
-  return (...args) => {
-    const now = Date.now();
-    if (now - lastTime >= ms) {
-      lastTime = now;
-      fn(...args);
-    }
-  };
-}
-
 function showToast(message, type = 'info', title = '') {
   const container = $('#toast-container');
   const toast = createElement(`
@@ -112,229 +107,203 @@ function showToast(message, type = 'info', title = '') {
   }, 5000);
 }
 
+function showStep(step) {
+  state.currentStep = step;
+  $('#step-job-type').classList.toggle('hidden', step !== 'job-type');
+  $('#step-country').classList.toggle('hidden', step !== 'country');
+  $('#step-loading').classList.toggle('hidden', step !== 'loading');
+  $('#search').classList.toggle('hidden', step !== 'results');
+}
+
+function updateFetchButton() {
+  const btn = $('#fetch-jobs-btn');
+  btn.disabled = state.selectedCountries.length === 0;
+  btn.textContent = state.selectedCountries.length > 0
+    ? `Fetch Jobs (${state.selectedCountries.length} countries selected)`
+    : 'Fetch Jobs';
+}
+
 // ============================================================================
-// 3D Background (Three.js-style but vanilla)
+// Job Type Selection
 // ============================================================================
 
-function initBackground() {
-  const canvas = $('#bg-canvas');
-  if (!canvas) return;
-
-  const ctx = canvas.getContext('2d');
-  let width, height, dpr;
-  let particles = [];
-  let mouseX = 0, mouseY = 0;
-  let animationId;
-
-  function resize() {
-    dpr = Math.min(window.devicePixelRatio, 2);
-    width = canvas.width = window.innerWidth * dpr;
-    height = canvas.height = window.innerHeight * dpr;
-    canvas.style.width = window.innerWidth + 'px';
-    canvas.style.height = window.innerHeight + 'px';
-    ctx.scale(dpr, dpr);
-    initParticles();
-  }
-
-  function initParticles() {
-    const count = Math.min(120, Math.floor((window.innerWidth * window.innerHeight) / 15000));
-    particles = [];
-    for (let i = 0; i < count; i++) {
-      particles.push({
-        x: Math.random() * window.innerWidth,
-        y: Math.random() * window.innerHeight,
-        vx: (Math.random() - 0.5) * 0.3,
-        vy: (Math.random() - 0.5) * 0.3,
-        radius: Math.random() * 1.5 + 0.5,
-        opacity: Math.random() * 0.5 + 0.1,
-        hue: 220 + Math.random() * 40, // Blue-ish
+function initJobTypeSelection() {
+  $$('.job-type-card').forEach(card => {
+    card.addEventListener('click', () => {
+      const type = card.dataset.type;
+      state.selectedJobType = type;
+      $$('.job-type-card').forEach(c => {
+        c.setAttribute('aria-checked', c === card);
       });
-    }
-  }
+      // Move to country selection after a brief delay
+      setTimeout(() => {
+        showStep('country');
+        renderCountryGrid();
+        updateFetchButton();
+      }, 300);
+    });
 
-  function draw() {
-    const w = window.innerWidth;
-    const h = window.innerHeight;
-
-    ctx.clearRect(0, 0, w, h);
-
-    // Draw connections
-    ctx.strokeStyle = 'rgba(37, 99, 235, 0.08)';
-    ctx.lineWidth = 0.5;
-
-    for (let i = 0; i < particles.length; i++) {
-      const p1 = particles[i];
-      for (let j = i + 1; j < particles.length; j++) {
-        const p2 = particles[j];
-        const dx = p1.x - p2.x;
-        const dy = p1.y - p2.y;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-
-        if (dist < 120) {
-          ctx.globalAlpha = (1 - dist / 120) * 0.3;
-          ctx.beginPath();
-          ctx.moveTo(p1.x, p1.y);
-          ctx.lineTo(p2.x, p2.y);
-          ctx.stroke();
-        }
+    // Keyboard support
+    card.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        card.click();
       }
-    }
-
-    // Draw particles
-    for (const p of particles) {
-      // Mouse influence
-      const dx = mouseX - p.x;
-      const dy = mouseY - p.y;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-      if (dist < 200) {
-        const force = (1 - dist / 200) * 0.5;
-        p.vx -= (dx / dist) * force * 0.02;
-        p.vy -= (dy / dist) * force * 0.02;
-      }
-
-      // Update position
-      p.x += p.vx;
-      p.y += p.vy;
-
-      // Wrap around
-      if (p.x < 0) p.x = w;
-      if (p.x > w) p.x = 0;
-      if (p.y < 0) p.y = h;
-      if (p.y > h) p.y = 0;
-
-      // Dampen velocity
-      p.vx *= 0.99;
-      p.vy *= 0.99;
-
-      // Draw
-      ctx.globalAlpha = p.opacity;
-      ctx.fillStyle = `hsl(${p.hue}, 70%, 60%)`;
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
-      ctx.fill();
-    }
-
-    ctx.globalAlpha = 1;
-    animationId = requestAnimationFrame(draw);
-  }
-
-  function handleMouseMove(e) {
-    mouseX = e.clientX;
-    mouseY = e.clientY;
-  }
-
-  function handleVisibilityChange() {
-    if (document.hidden) {
-      cancelAnimationFrame(animationId);
-    } else {
-      draw();
-    }
-  }
-
-  window.addEventListener('resize', debounce(resize, 100));
-  window.addEventListener('mousemove', handleMouseMove);
-  document.addEventListener('visibilitychange', handleVisibilityChange);
-
-  // Theme change handler
-  const observer = new MutationObserver(() => {
-    initParticles(); // Re-init with new colors
-  });
-  observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
-
-  resize();
-  draw();
-
-  return () => {
-    cancelAnimationFrame(animationId);
-    window.removeEventListener('resize', resize);
-    window.removeEventListener('mousemove', handleMouseMove);
-    document.removeEventListener('visibilitychange', handleVisibilityChange);
-    observer.disconnect();
-  };
-}
-
-// ============================================================================
-// Theme Management
-// ============================================================================
-
-function initTheme() {
-  const saved = localStorage.getItem('theme');
-  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-  const theme = saved || (prefersDark ? 'dark' : 'light');
-  applyTheme(theme);
-
-  $('#theme-toggle').addEventListener('click', () => {
-    const newTheme = state.theme === 'light' ? 'dark' : 'light';
-    applyTheme(newTheme);
-  });
-}
-
-function applyTheme(theme) {
-  state.theme = theme;
-  document.documentElement.setAttribute('data-theme', theme);
-  localStorage.setItem('theme', theme);
-}
-
-// ============================================================================
-// Mobile Menu
-// ============================================================================
-
-function initMobileMenu() {
-  const toggle = $('.nav-toggle');
-  const menu = $('.nav-menu');
-
-  toggle.addEventListener('click', () => {
-    state.isMobileMenuOpen = !state.isMobileMenuOpen;
-    toggle.setAttribute('aria-expanded', state.isMobileMenuOpen);
-    menu.classList.toggle('open', state.isMobileMenuOpen);
-    document.body.style.overflow = state.isMobileMenuOpen ? 'hidden' : '';
-  });
-
-  // Close on link click
-  $$('.nav-link', menu).forEach(link => {
-    link.addEventListener('click', () => {
-      state.isMobileMenuOpen = false;
-      toggle.setAttribute('aria-expanded', 'false');
-      menu.classList.remove('open');
-      document.body.style.overflow = '';
     });
   });
-
-  // Close on escape
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && state.isMobileMenuOpen) {
-      state.isMobileMenuOpen = false;
-      toggle.setAttribute('aria-expanded', 'false');
-      menu.classList.remove('open');
-      document.body.style.overflow = '';
-    }
-  });
 }
 
 // ============================================================================
-// Filter Form
+// Country Grid
 // ============================================================================
 
-function initFilters() {
-  const form = $('#filter-form');
+function renderCountryGrid() {
+  const grid = $('#country-grid');
+  grid.innerHTML = '';
 
-  // Populate countries
-  const countryList = $('#country-list');
-  COUNTRIES.forEach(country => {
+  TARGET_COUNTRIES.forEach(country => {
+    const isSelected = state.selectedCountries.includes(country.code);
+    const card = createElement(`
+      <button type="button" class="country-card" data-country="${country.code}" role="radio" aria-checked="${isSelected}" tabindex="0">
+        <span class="country-flag">${country.flag}</span>
+        <span class="country-name">${country.name}</span>
+        <span class="country-code">${country.code}</span>
+      </button>
+    `);
+
+    card.addEventListener('click', () => toggleCountry(country.code));
+    card.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        toggleCountry(country.code);
+      }
+    });
+
+    grid.appendChild(card);
+  });
+}
+
+function toggleCountry(code) {
+  const index = state.selectedCountries.indexOf(code);
+  if (index === -1) {
+    state.selectedCountries.push(code);
+  } else {
+    state.selectedCountries.splice(index, 1);
+  }
+  renderCountryGrid();
+  updateFetchButton();
+}
+
+// ============================================================================
+// Fetch Jobs (simulated)
+// ============================================================================
+
+function initFetchJobs() {
+  $('#fetch-jobs-btn').addEventListener('click', async () => {
+    showStep('loading');
+
+    // Simulate fetching from real sources
+    await new Promise(resolve => setTimeout(resolve, 1500));
+
+    // Filter sample jobs by selected job type and countries
+    let jobs = SAMPLE_JOBS.filter(job =>
+      job.jobType === state.selectedJobType &&
+      state.selectedCountries.includes(job.country)
+    );
+
+    // Also include remote jobs from companies that hire in those countries
+    const remoteJobs = SAMPLE_JOBS.filter(job =>
+      job.jobType === state.selectedJobType &&
+      job.remotePolicy === 'fully-remote' &&
+      job.companyType !== 'government'
+    );
+
+    jobs = [...jobs, ...remoteJobs];
+    // Remove duplicates
+    jobs = jobs.filter((job, i, arr) => arr.findIndex(j => j.id === job.id) === i);
+
+    state.fetchedJobs = jobs;
+    state.filteredJobs = jobs;
+    state.totalJobs = jobs.length;
+    state.filters.jobType = [state.selectedJobType];
+    state.filters.country = [...state.selectedCountries];
+    state.currentPage = 1;
+
+    renderResultsHeader();
+    renderCountryFilters();
+    renderTechFilters();
+    renderJobs();
+    renderPagination();
+
+    showStep('results');
+    $('#search').scrollIntoView({ behavior: 'smooth' });
+  });
+
+  $('#back-to-job-type').addEventListener('click', () => {
+    state.selectedCountries = [];
+    showStep('job-type');
+  });
+
+  $('#new-search-btn').addEventListener('click', () => {
+    state.selectedJobType = null;
+    state.selectedCountries = [];
+    state.fetchedJobs = [];
+    state.filteredJobs = [];
+    $$('.job-type-card').forEach(c => c.setAttribute('aria-checked', 'false'));
+    showStep('job-type');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+}
+
+function renderResultsHeader() {
+  const jobType = JOB_TYPES.find(t => t.value === state.selectedJobType);
+  $('#result-job-type').textContent = jobType?.label || state.selectedJobType;
+  $('#result-countries').textContent = state.selectedCountries
+    .map(c => TARGET_COUNTRIES.find(t => t.code === c)?.name || c)
+    .join(', ');
+  $('#results-count').textContent = state.totalJobs.toLocaleString();
+  $('#results-subtitle').textContent = `${state.totalJobs.toLocaleString()} verified jobs found`;
+}
+
+// ============================================================================
+// Filter Rendering
+// ============================================================================
+
+function renderCountryFilters() {
+  const list = $('#country-filter-list');
+  list.innerHTML = '';
+
+  state.selectedCountries.forEach(code => {
+    const country = TARGET_COUNTRIES.find(c => c.code === code);
+    if (!country) return;
+    const isChecked = state.filters.country.includes(code);
     const label = createElement(`
       <label class="filter-option">
-        <input type="checkbox" name="country" value="${country.code}">
+        <input type="checkbox" name="country" value="${code}" ${isChecked ? 'checked' : ''}>
         <span class="filter-option-ui">
           <span>${country.flag} ${country.name}</span>
-          <span style="margin-left:auto;color:var(--fg-subtle);font-size:0.75rem;">${country.jobs.toLocaleString()}</span>
         </span>
       </label>
     `);
-    countryList.appendChild(label);
+    list.appendChild(label);
   });
 
-  // Populate technologies
-  const techList = $('#tech-list');
+  // Bind checkbox events
+  $$('input[name="country"]', list).forEach(input => {
+    input.addEventListener('change', () => {
+      const value = input.value;
+      if (input.checked) {
+        if (!state.filters.country.includes(value)) state.filters.country.push(value);
+      } else {
+        state.filters.country = state.filters.country.filter(v => v !== value);
+      }
+      applyFilters();
+    });
+  });
+}
+
+function renderTechFilters() {
+  const list = $('#tech-filter-list');
   const techByCategory = TECHNOLOGIES.reduce((acc, tech) => {
     if (!acc[tech.category]) acc[tech.category] = [];
     acc[tech.category].push(tech);
@@ -360,97 +329,18 @@ function initFilters() {
       optionsDiv.appendChild(label);
     });
     categoryDiv.appendChild(optionsDiv);
-    techList.appendChild(categoryDiv);
+    list.appendChild(categoryDiv);
   });
 
-  // Filter search functionality
-  $$('.filter-search input').forEach(input => {
-    input.addEventListener('input', debounce(e => {
+  // Filter search
+  $('#tech-filter-list').closest('.filter-group').querySelector('.filter-search input')
+    .addEventListener('input', debounce(e => {
       const term = e.target.value.toLowerCase();
-      const container = e.target.closest('.filter-group').querySelector('.filter-options');
-      $$('.filter-option', container).forEach(opt => {
+      $$('.filter-option', list).forEach(opt => {
         const text = opt.textContent.toLowerCase();
         opt.style.display = text.includes(term) ? 'flex' : 'none';
       });
     }, 200));
-  });
-
-  // Expand/collapse
-  $$('.filter-expand').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const expanded = btn.getAttribute('aria-expanded') === 'true';
-      btn.setAttribute('aria-expanded', !expanded);
-      const target = $('#' + btn.getAttribute('aria-controls'));
-      if (target) target.style.maxHeight = expanded ? '200px' : 'none';
-    });
-  });
-
-  // Salary presets
-  $$('.salary-preset').forEach(btn => {
-    btn.addEventListener('click', () => {
-      $$('.salary-preset').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      $('#salary-min').value = btn.dataset.min || '';
-      $('#salary-max').value = btn.dataset.max || '';
-    });
-  });
-
-  // Form submit
-  form.addEventListener('submit', e => {
-    e.preventDefault();
-    const formData = new FormData(form);
-    state.filters = {
-      keyword: formData.get('keyword') || '',
-      jobType: formData.getAll('jobType'),
-      country: formData.getAll('country'),
-      visaType: formData.getAll('visaType'),
-      salaryMin: formData.get('salaryMin') ? parseInt(formData.get('salaryMin')) : null,
-      salaryMax: formData.get('salaryMax') ? parseInt(formData.get('salaryMax')) : null,
-      techStack: formData.getAll('techStack'),
-      experience: formData.getAll('experience'),
-      remote: formData.getAll('remote'),
-    };
-    state.currentPage = 1;
-    applyFilters();
-  });
-
-  // Form reset
-  form.addEventListener('reset', () => {
-    state.filters = {
-      keyword: '',
-      jobType: ['fulltime'],
-      country: [],
-      visaType: [],
-      salaryMin: null,
-      salaryMax: null,
-      techStack: [],
-      experience: [],
-      remote: [],
-    };
-    $$('.salary-preset').forEach(b => b.classList.remove('active'));
-    $('#salary-min').value = '';
-    $('#salary-max').value = '';
-    state.currentPage = 1;
-    applyFilters();
-  });
-
-  // Hero search form
-  $('#hero-search').addEventListener('submit', e => {
-    e.preventDefault();
-    const keyword = $('#hero-keyword').value.trim();
-    const location = $('#hero-location').value.trim();
-    state.filters.keyword = keyword;
-    if (location) {
-      const country = COUNTRIES.find(c => c.name.toLowerCase().includes(location.toLowerCase()) || c.code.toLowerCase() === location.toLowerCase());
-      if (country) state.filters.country = [country.code];
-      else if (location.toLowerCase() === 'remote') {
-        state.filters.remote = ['fully-remote'];
-      }
-    }
-    state.currentPage = 1;
-    applyFilters();
-    $('#search').scrollIntoView({ behavior: 'smooth' });
-  });
 }
 
 // ============================================================================
@@ -458,12 +348,15 @@ function initFilters() {
 // ============================================================================
 
 function applyFilters() {
-  let jobs = filterJobs(JOBS, state.filters);
+  let jobs = filterJobs(state.fetchedJobs, state.filters);
   jobs = sortJobs(jobs, state.sortBy);
   state.filteredJobs = jobs;
   state.totalJobs = jobs.length;
+  state.currentPage = 1;
   renderJobs();
   renderPagination();
+  $('#results-count').textContent = state.totalJobs.toLocaleString();
+  $('#results-subtitle').textContent = `${state.totalJobs.toLocaleString()} verified jobs found`;
 }
 
 function renderJobs() {
@@ -531,20 +424,16 @@ function createJobCard(job) {
         </div>
       </div>
       <div class="job-footer">
-        <div class="job-salary">${formatSalary(job.salaryMin, job.salaryMax)}</div>
+        <div class="job-salary">${formatSalary(job.salaryMin, job.salaryMax, job.salaryCurrency)}</div>
         <div class="job-actions">
           <button class="btn btn-ghost btn-sm" data-action="details">Details</button>
-          <a href="${job.applyUrl}" target="_blank" rel="noopener" class="btn btn-primary btn-sm">Apply</a>
+          <a href="${job.applyUrl}" target="_blank" rel="noopener" class="btn btn-primary btn-sm">Apply on Company Site</a>
         </div>
       </div>
     </article>
   `);
 
-  // Event listeners
   card.querySelector('[data-action="details"]').addEventListener('click', () => openJobModal(job));
-  card.querySelector('a[href*="careers"]').addEventListener('click', (e) => {
-    // Track click
-  });
 
   return card;
 }
@@ -584,12 +473,10 @@ function renderPagination() {
 
   let html = '';
 
-  // Previous
   html += `<button class="page-btn" ${currentPage === 1 ? 'disabled' : ''} data-page="${currentPage - 1}" aria-label="Previous page">
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
   </button>`;
 
-  // Pages
   const maxVisible = 5;
   let start = Math.max(1, currentPage - Math.floor(maxVisible / 2));
   let end = Math.min(totalPages, start + maxVisible - 1);
@@ -611,7 +498,6 @@ function renderPagination() {
     html += `<button class="page-btn" data-page="${totalPages}">${totalPages}</button>`;
   }
 
-  // Next
   html += `<button class="page-btn" ${currentPage === totalPages ? 'disabled' : ''} data-page="${currentPage + 1}" aria-label="Next page">
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
   </button>`;
@@ -661,6 +547,140 @@ function initSort() {
 }
 
 // ============================================================================
+// Filter Form
+// ============================================================================
+
+function initFilters() {
+  const form = $('#filter-form');
+
+  // Keyword search
+  $('#keyword-filter').addEventListener('input', debounce(e => {
+    state.filters.keyword = e.target.value;
+    applyFilters();
+  }, 300));
+
+  // Visa type
+  $$('input[name="visaType"]', form).forEach(input => {
+    input.addEventListener('change', () => {
+      const value = input.value;
+      if (input.checked) {
+        if (!state.filters.visaType.includes(value)) state.filters.visaType.push(value);
+      } else {
+        state.filters.visaType = state.filters.visaType.filter(v => v !== value);
+      }
+      applyFilters();
+    });
+  });
+
+  // Salary presets
+  $$('.salary-preset').forEach(btn => {
+    btn.addEventListener('click', () => {
+      $$('.salary-preset').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      $('#salary-min').value = btn.dataset.min || '';
+      $('#salary-max').value = btn.dataset.max || '';
+      state.filters.salaryMin = btn.dataset.min ? parseInt(btn.dataset.min) : null;
+      state.filters.salaryMax = btn.dataset.max ? parseInt(btn.dataset.max) : null;
+      applyFilters();
+    });
+  });
+
+  $('#salary-min').addEventListener('change', e => {
+    state.filters.salaryMin = e.target.value ? parseInt(e.target.value) : null;
+    $$('.salary-preset').forEach(b => b.classList.remove('active'));
+    applyFilters();
+  });
+
+  $('#salary-max').addEventListener('change', e => {
+    state.filters.salaryMax = e.target.value ? parseInt(e.target.value) : null;
+    $$('.salary-preset').forEach(b => b.classList.remove('active'));
+    applyFilters();
+  });
+
+  // Experience
+  $$('input[name="experience"]', form).forEach(input => {
+    input.addEventListener('change', () => {
+      const value = input.value;
+      if (input.checked) {
+        if (!state.filters.experience.includes(value)) state.filters.experience.push(value);
+      } else {
+        state.filters.experience = state.filters.experience.filter(v => v !== value);
+      }
+      applyFilters();
+    });
+  });
+
+  // Remote
+  $$('input[name="remote"]', form).forEach(input => {
+    input.addEventListener('change', () => {
+      const value = input.value;
+      if (input.checked) {
+        if (!state.filters.remote.includes(value)) state.filters.remote.push(value);
+      } else {
+        state.filters.remote = state.filters.remote.filter(v => v !== value);
+      }
+      applyFilters();
+    });
+  });
+
+  // Tech stack
+  $$('input[name="techStack"]', form).forEach(input => {
+    input.addEventListener('change', () => {
+      const value = input.value;
+      if (input.checked) {
+        if (!state.filters.techStack.includes(value)) state.filters.techStack.push(value);
+      } else {
+        state.filters.techStack = state.filters.techStack.filter(v => v !== value);
+      }
+      applyFilters();
+    });
+  });
+
+  // Form reset
+  form.addEventListener('reset', () => {
+    state.filters = {
+      keyword: '',
+      jobType: [state.selectedJobType],
+      country: [...state.selectedCountries],
+      visaType: [],
+      salaryMin: null,
+      salaryMax: null,
+      techStack: [],
+      experience: [],
+      remote: [],
+    };
+    $$('.salary-preset').forEach(b => b.classList.remove('active'));
+    $('#salary-min').value = '';
+    $('#salary-max').value = '';
+    $('#keyword-filter').value = '';
+    state.currentPage = 1;
+    applyFilters();
+  });
+
+  // Country filter search
+  $('#country-filter-list').closest('.filter-group').querySelector('.filter-search input')
+    .addEventListener('input', debounce(e => {
+      const term = e.target.value.toLowerCase();
+      $$('.filter-option', '#country-filter-list').forEach(opt => {
+        const text = opt.textContent.toLowerCase();
+        opt.style.display = text.includes(term) ? 'flex' : 'none';
+      });
+    }, 200));
+
+  // Expand/collapse
+  $$('.filter-expand').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const expanded = btn.getAttribute('aria-expanded') === 'true';
+      btn.setAttribute('aria-expanded', !expanded);
+      const target = $('#' + btn.getAttribute('aria-controls'));
+      if (target) target.style.maxHeight = expanded ? '200px' : 'none';
+    });
+  });
+
+  $('#clear-filters-btn').addEventListener('click', () => form.reset());
+}
+
+// ============================================================================
 // Job Detail Modal
 // ============================================================================
 
@@ -688,7 +708,7 @@ function openJobModal(job) {
       <section class="modal-section">
         <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> Overview</h3>
         <div class="modal-meta-grid">
-          <div class="modal-meta-item"><span class="modal-meta-label">Salary</span><span class="modal-meta-value">${formatSalary(job.salaryMin, job.salaryMax)}</span></div>
+          <div class="modal-meta-item"><span class="modal-meta-label">Salary</span><span class="modal-meta-value">${formatSalary(job.salaryMin, job.salaryMax, job.salaryCurrency)}</span></div>
           <div class="modal-meta-item"><span class="modal-meta-label">Job Type</span><span class="modal-meta-value">${formatJobType(job.jobType)}</span></div>
           <div class="modal-meta-item"><span class="modal-meta-label">Experience</span><span class="modal-meta-value">${formatExperience(job.experience)}</span></div>
           <div class="modal-meta-item"><span class="modal-meta-label">Remote Policy</span><span class="modal-meta-value">${formatRemote(job.remotePolicy)}</span></div>
@@ -872,7 +892,7 @@ function initResumeMatch() {
 
     try {
       state.resumeData = await parseResume(state.resumeFile);
-      state.matchedJobs = matchJobsToResume(JOBS, state.resumeData);
+      state.matchedJobs = matchJobsToResume(SAMPLE_JOBS, state.resumeData);
 
       // Show results
       $('#upload-panel').querySelector('.upload-area').style.display = 'none';
@@ -968,7 +988,7 @@ function initResumeMatch() {
         <div class="match-job-details">
           <span class="match-job-detail">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/></svg>
-            ${formatSalary(job.salaryMin, job.salaryMax)}
+            ${formatSalary(job.salaryMin, job.salaryMax, job.salaryCurrency)}
           </span>
           <span class="match-job-detail">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/></svg>
@@ -1023,28 +1043,58 @@ function initResumeMatch() {
 }
 
 // ============================================================================
-// Clear Filters Button (No Results)
+// Theme Management
 // ============================================================================
 
-function initClearFilters() {
-  $('#clear-filters-btn').addEventListener('click', () => {
-    $('#filter-form').reset();
-    state.filters = {
-      keyword: '',
-      jobType: ['fulltime'],
-      country: [],
-      visaType: [],
-      salaryMin: null,
-      salaryMax: null,
-      techStack: [],
-      experience: [],
-      remote: [],
-    };
-    $$('.salary-preset').forEach(b => b.classList.remove('active'));
-    $('#salary-min').value = '';
-    $('#salary-max').value = '';
-    state.currentPage = 1;
-    applyFilters();
+function initTheme() {
+  const saved = localStorage.getItem('theme');
+  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  const theme = saved || (prefersDark ? 'dark' : 'light');
+  applyTheme(theme);
+
+  $('#theme-toggle').addEventListener('click', () => {
+    const newTheme = state.theme === 'light' ? 'dark' : 'light';
+    applyTheme(newTheme);
+  });
+}
+
+function applyTheme(theme) {
+  state.theme = theme;
+  document.documentElement.setAttribute('data-theme', theme);
+  localStorage.setItem('theme', theme);
+}
+
+// ============================================================================
+// Mobile Menu
+// ============================================================================
+
+function initMobileMenu() {
+  const toggle = $('.nav-toggle');
+  const menu = $('.nav-menu');
+
+  toggle.addEventListener('click', () => {
+    state.isMobileMenuOpen = !state.isMobileMenuOpen;
+    toggle.setAttribute('aria-expanded', state.isMobileMenuOpen);
+    menu.classList.toggle('open', state.isMobileMenuOpen);
+    document.body.style.overflow = state.isMobileMenuOpen ? 'hidden' : '';
+  });
+
+  $$('.nav-link', menu).forEach(link => {
+    link.addEventListener('click', () => {
+      state.isMobileMenuOpen = false;
+      toggle.setAttribute('aria-expanded', 'false');
+      menu.classList.remove('open');
+      document.body.style.overflow = '';
+    });
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && state.isMobileMenuOpen) {
+      state.isMobileMenuOpen = false;
+      toggle.setAttribute('aria-expanded', 'false');
+      menu.classList.remove('open');
+      document.body.style.overflow = '';
+    }
   });
 }
 
@@ -1054,13 +1104,11 @@ function initClearFilters() {
 
 function initCTA() {
   $('#cta-search').addEventListener('click', () => {
-    $('#search').scrollIntoView({ behavior: 'smooth' });
+    showStep('job-type');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   });
   $('#cta-upload').addEventListener('click', () => {
     $('#resume-match').scrollIntoView({ behavior: 'smooth' });
-  });
-  $('#hero-search [type="submit"]').addEventListener('click', () => {
-    $('#search').scrollIntoView({ behavior: 'smooth' });
   });
 }
 
@@ -1098,19 +1146,18 @@ function initScrollAnimations() {
     });
   }, { threshold: 0.1, rootMargin: '0px 0px -50px 0px' });
 
-  $$('.step, .trust-item, .feature, .float-card, .section-header, .hero-content > *').forEach(el => {
+  $$('.step, .trust-item, .feature, .job-type-card, .country-card, .section-header, .hero-content > *').forEach(el => {
     el.style.opacity = '0';
     el.style.transform = 'translateY(20px)';
     el.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
     observer.observe(el);
   });
 
-  // Add animate-in class styles dynamically
   const style = document.createElement('style');
   style.textContent = `
     .animate-in { opacity: 1 !important; transform: translateY(0) !important; }
     @media (prefers-reduced-motion: reduce) {
-      .step, .trust-item, .feature, .float-card, .section-header, .hero-content > * {
+      .step, .trust-item, .feature, .job-type-card, .country-card, .section-header, .hero-content > * {
         opacity: 1 !important; transform: none !important; transition: none !important;
       }
     }
@@ -1119,50 +1166,16 @@ function initScrollAnimations() {
 }
 
 // ============================================================================
-// Stats Counter Animation
-// ============================================================================
-
-function initStatsCounter() {
-  const observer = new IntersectionObserver((entries) => {
-    entries.forEach(entry => {
-      if (entry.isIntersecting) {
-        animateValue(entry.target);
-        observer.unobserve(entry.target);
-      }
-    });
-  }, { threshold: 0.5 });
-
-  $$('.stat-value[data-count]').forEach(el => observer.observe(el));
-
-  function animateValue(el) {
-    const target = parseInt(el.dataset.count);
-    const duration = 2000;
-    const start = performance.now();
-
-    function update(now) {
-      const progress = Math.min((now - start) / duration, 1);
-      const eased = 1 - Math.pow(1 - progress, 3);
-      const current = Math.floor(target * eased);
-      el.textContent = current.toLocaleString() + (target >= 1000000 ? 'M+' : target >= 1000 ? 'K+' : '+');
-      if (progress < 1) requestAnimationFrame(update);
-    }
-    requestAnimationFrame(update);
-  }
-}
-
-// ============================================================================
 // Keyboard Navigation
 // ============================================================================
 
 function initKeyboardNav() {
   document.addEventListener('keydown', e => {
-    // Escape closes modal
     if (e.key === 'Escape') {
       const modal = $('#job-modal');
       if (modal.open) modal.close();
     }
 
-    // Arrow keys for pagination when focused
     if (e.target.matches('.page-btn') && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
       e.preventDefault();
       const buttons = $$('.page-btn:not(:disabled)');
@@ -1181,14 +1194,16 @@ function init() {
   // Core
   initTheme();
   initMobileMenu();
-  initBackground();
   initModal();
 
-  // Search
-  initFilters();
+  // Search flow
+  initJobTypeSelection();
+  initFetchJobs();
+
+  // Results
   initViewToggle();
   initSort();
-  initClearFilters();
+  initFilters();
 
   // Resume Match
   initResumeMatch();
@@ -1197,11 +1212,10 @@ function init() {
   initCTA();
   initSmoothScroll();
   initScrollAnimations();
-  initStatsCounter();
   initKeyboardNav();
 
-  // Initial render
-  applyFilters();
+  // Initial state
+  showStep('job-type');
 
   // Add spin animation for loading
   const style = document.createElement('style');
