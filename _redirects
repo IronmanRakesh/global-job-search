@@ -1,0 +1,4 @@
+# Netlify Redirects for Global Job Search
+# Static site - serve index.html for all routes
+
+/*  /index.html  200
